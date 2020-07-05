@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	github.com/operator-framework/operator-sdk v0.18.2
-	github.com/operator-framework/operator-sdk-samples/go/memcached-operator v0.0.0-20200703111833-1306fcccf2a2
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2

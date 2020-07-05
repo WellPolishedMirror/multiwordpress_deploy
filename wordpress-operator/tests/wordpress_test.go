@@ -58,6 +58,8 @@ func WordpressCluster(t *testing.T) {
 	if err = wordpressConfigTest(t, f, ctx); err != nil {
 		t.Fatal(err)
 	}
+
+	// TODO: Create more tests once there are utilities for watching for the creation of: {Service, PVC, Secret}
 }
 
 // Checks that the sqlRootPassword is saved.

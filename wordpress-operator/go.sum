@@ -632,8 +632,6 @@ github.com/operator-framework/operator-sdk v0.18.1/go.mod h1:QMFHXj8+SxF56tfR1Qm
 github.com/operator-framework/operator-sdk v0.18.2 h1:Ts5ckGcJ/Jf+2IXeagsEk87o83bEeA+Z7DwNkyWEBPs=
 github.com/operator-framework/operator-sdk v0.18.2/go.mod h1:XPYwfr/2R81nK5wzX1Xtesh9pduffTuuBGB76iDClh0=
 github.com/operator-framework/operator-sdk-samples v0.17.0 h1:8z4PFlCjPP2DcJAywj7Pbp2WChsbUsWOkdrPYLpMkuM=
-github.com/operator-framework/operator-sdk-samples/go/memcached-operator v0.0.0-20200703111833-1306fcccf2a2 h1:m9gNyZEdb+Amq7sxm/V6BTAkNzF2/s/0+T6AN0DliIQ=
-github.com/operator-framework/operator-sdk-samples/go/memcached-operator v0.0.0-20200703111833-1306fcccf2a2/go.mod h1:1EXpKSIjWoge7OxF9P0XHha2Eublt1TfqyoBuCAK/J8=
 github.com/otiai10/copy v1.2.0/go.mod h1:rrF5dJ5F0t/EWSYODDu4j9/vEeYHMkc8jt0zJChqQWw=
 github.com/otiai10/curr v0.0.0-20150429015615-9b4961190c95/go.mod h1:9qAhocn7zKJG+0mI8eUu6xqkFDYS2kb2saOteoSB3cE=
 github.com/otiai10/curr v1.0.0/go.mod h1:LskTG5wDwr8Rs+nNQ+1LlxRjAtTZZjtJW4rMXl6j4vs=
