@@ -51,6 +51,36 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Watching for secondary resources.
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &examplev1.Wordpress{},
+	})
+	if err != nil {
+		return err
+	}
+	err = c.Watch(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &examplev1.Wordpress{},
+	})
+	if err != nil {
+		return err
+	}
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &examplev1.Wordpress{},
+	})
+	if err != nil {
+		return err
+	}
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &examplev1.Wordpress{},
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -96,8 +126,8 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 				I will do so once I study higher-order functions in Go.
 	***/
 	// Create Secret if it doesn't already exist
-	secret_found := &corev1.Secret{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, secret_found)
+	secretFound := &corev1.Secret{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, secretFound)
 	if err != nil && errors.IsNotFound(err) {
 		sec := r.secretForWordpress(instance)
 		reqLogger.Info("Creating a new Secret", "Secret.Namespace", sec.Namespace, "Secret.Name", sec.Name)
@@ -113,15 +143,15 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	// Create mysql PersistentVolume if it doesn't already exist.
-	mysql_pvc_found := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysql_pvc_found)
+	// Create mysql PersistentVolumeClaim if it doesn't already exist.
+	mysqlPVCFound := &corev1.PersistentVolumeClaim{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysqlPVCFound)
 	if err != nil && errors.IsNotFound(err) {
-		mysql_pvc := r.mysqlPVCForWordpress(instance)
-		reqLogger.Info("Creating a new PVC", "mysql_pvc.Namespace", mysql_pvc.Namespace, "mysql_pvc.Name", mysql_pvc.Name)
-		err = r.client.Create(context.TODO(), mysql_pvc)
+		mysqlPVC := r.mysqlPVCForWordpress(instance)
+		reqLogger.Info("Creating a new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
+		err = r.client.Create(context.TODO(), mysqlPVC)
 		if err != nil {
-			reqLogger.Error(err, "Failed to create new PVC", "mysql_pvc.Namespace", mysql_pvc.Namespace, "mysql_pvc.Name", mysql_pvc.Name)
+			reqLogger.Error(err, "Failed to create new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
 			return reconcile.Result{}, err
 		}
 		// PVC created successfully - return and requeue
@@ -130,15 +160,15 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		reqLogger.Error(err, "Failed to get mysql PVC")
 		return reconcile.Result{}, err
 	}
-	// Create wordpress PV if it doesn't already exist.
-	wordpress_pvc_found := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpress_pvc_found)
+	// Create wordpress PVC if it doesn't already exist.
+	wordpressPVCFound := &corev1.PersistentVolumeClaim{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpressPVCFound)
 	if err != nil && errors.IsNotFound(err) {
-		wordpress_pvc := r.wordpressPVCForWordpress(instance)
-		reqLogger.Info("Creating a new PVC", "wordpress_pv.Namespace", wordpress_pvc.Namespace, "wordpress_pv.Name", wordpress_pvc.Name)
-		err = r.client.Create(context.TODO(), wordpress_pvc)
+		wordpressPVC := r.wordpressPVCForWordpress(instance)
+		reqLogger.Info("Creating a new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
+		err = r.client.Create(context.TODO(), wordpressPVC)
 		if err != nil {
-			reqLogger.Error(err, "Failed to create new PVC", "wordpress_pv.Namespace", wordpress_pvc.Namespace, "wordpress_pv.Name", wordpress_pvc.Name)
+			reqLogger.Error(err, "Failed to create new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
 			return reconcile.Result{}, err
 		}
 		// PV created successfully - return and requeue
@@ -148,15 +178,32 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	// Create mysql deployment if it doesn't already exist.
-	mysql_dep_found := &appsv1.Deployment{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysql_dep_found)
+	// Create wordpress deployment if it doesn't already exist.
+	wordpressDepFound := &appsv1.Deployment{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpressDepFound)
 	if err != nil && errors.IsNotFound(err) {
-		mysql_dep := r.mysqlDeploymentForWordpress(instance)
-		reqLogger.Info("Creating a new Deployment", "mysql_dep.Namespace", mysql_dep.Namespace, "mysql_dep.Name", mysql_dep.Name)
-		err = r.client.Create(context.TODO(), mysql_dep)
+		wordpressDep := r.wordpressDeploymentForWordpress(instance)
+		reqLogger.Info("Creating a new Deployment", "wordpressDep.Namespace", wordpressDep.Namespace, "wordpressDep.Name", wordpressDep.Name)
+		err = r.client.Create(context.TODO(), wordpressDep)
 		if err != nil {
-			reqLogger.Error(err, "Failed to create new Deployment", "mysql_dep.Namespace", mysql_dep.Namespace, "mysql_dep.Name", mysql_dep.Name)
+			reqLogger.Error(err, "Failed to create new Deployment", "wordpressDep.Namespace", wordpressDep.Namespace, "wordpressDep.Name", wordpressDep.Name)
+			return reconcile.Result{}, err
+		}
+		// Deployment created successfully - return and requeue
+		return reconcile.Result{Requeue: true}, nil
+	} else if err != nil {
+		reqLogger.Error(err, "Failed to get wordpress Deployment")
+		return reconcile.Result{}, err
+	}
+	// Create mysql deployment if it doesn't already exist.
+	mysqlDepFound := &appsv1.Deployment{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysqlDepFound)
+	if err != nil && errors.IsNotFound(err) {
+		mysqlDep := r.mysqlDeploymentForWordpress(instance)
+		reqLogger.Info("Creating a new Deployment", "mysqlDep.Namespace", mysqlDep.Namespace, "mysqlDep.Name", mysqlDep.Name)
+		err = r.client.Create(context.TODO(), mysqlDep)
+		if err != nil {
+			reqLogger.Error(err, "Failed to create new Deployment", "mysqlDep.Namespace", mysqlDep.Namespace, "mysqlDep.Name", mysqlDep.Name)
 			return reconcile.Result{}, err
 		}
 		// Deployment created successfully - return and requeue
@@ -167,14 +214,14 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	// Create mysql service
-	mysql_service_found := &corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysql_service_found)
+	mysqlServiceFound := &corev1.Service{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysqlServiceFound)
 	if err != nil && errors.IsNotFound(err) {
-		mysql_service := r.mysqlServiceForWordpress(instance)
-		reqLogger.Info("Creating a new Service", "mysql_service.Namespace", mysql_service.Namespace, "mysql_service.Name", mysql_service.Name)
-		err = r.client.Create(context.TODO(), mysql_service)
+		mysqlService := r.mysqlServiceForWordpress(instance)
+		reqLogger.Info("Creating a new Service", "mysqlService.Namespace", mysqlService.Namespace, "mysqlService.Name", mysqlService.Name)
+		err = r.client.Create(context.TODO(), mysqlService)
 		if err != nil {
-			reqLogger.Error(err, "Failed to create new Service", "mysql_service.Namespace", mysql_service.Namespace, "mysql_service.Name", mysql_service.Name)
+			reqLogger.Error(err, "Failed to create new Service", "mysqlService.Namespace", mysqlService.Namespace, "mysqlService.Name", mysqlService.Name)
 			return reconcile.Result{}, err
 		}
 		// Service created successfully - return and requeue
@@ -183,34 +230,15 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		reqLogger.Error(err, "Failed to get mysql Service")
 		return reconcile.Result{}, err
 	}
-
-	// Create wordpress deployment if it doesn't already exist.
-	wordpress_dep_found := &appsv1.Deployment{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpress_dep_found)
-	if err != nil && errors.IsNotFound(err) {
-		wordpress_dep := r.wordpressDeploymentForWordpress(instance)
-		reqLogger.Info("Creating a new Deployment", "wordpress_dep.Namespace", wordpress_dep.Namespace, "wordpress_dep.Name", wordpress_dep.Name)
-		err = r.client.Create(context.TODO(), wordpress_dep)
-		if err != nil {
-			reqLogger.Error(err, "Failed to create new Deployment", "wordpress_dep.Namespace", wordpress_dep.Namespace, "wordpress_dep.Name", wordpress_dep.Name)
-			return reconcile.Result{}, err
-		}
-		// Deployment created successfully - return and requeue
-		return reconcile.Result{Requeue: true}, nil
-	} else if err != nil {
-		reqLogger.Error(err, "Failed to get wordpress Deployment")
-		return reconcile.Result{}, err
-	}
-
 	// Create wordpress service
-	wordpress_service_found := &corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpress_service_found)
+	wordpressServiceFound := &corev1.Service{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpressServiceFound)
 	if err != nil && errors.IsNotFound(err) {
-		wordpress_service := r.wordpressServiceForWordpress(instance)
-		reqLogger.Info("Creating a new Service", "wordpress_service.Namespace", wordpress_service.Namespace, "wordpress_service.Name", wordpress_service.Name)
-		err = r.client.Create(context.TODO(), wordpress_service)
+		wordpressService := r.wordpressServiceForWordpress(instance)
+		reqLogger.Info("Creating a new Service", "wordpressService.Namespace", wordpressService.Namespace, "wordpressService.Name", wordpressService.Name)
+		err = r.client.Create(context.TODO(), wordpressService)
 		if err != nil {
-			reqLogger.Error(err, "Failed to create new Service", "wordpress_service.Namespace", wordpress_service.Namespace, "wordpress_service.Name", wordpress_service.Name)
+			reqLogger.Error(err, "Failed to create new Service", "wordpressService.Namespace", wordpressService.Namespace, "wordpressService.Name", wordpressService.Name)
 			return reconcile.Result{}, err
 		}
 		// Service created successfully - return and requeue
@@ -256,8 +284,10 @@ func (r *ReconcileWordpress) mysqlPVCForWordpress(m *examplev1.Wordpress) *corev
 	ls := labelsForWordpress(m.Name)
 	ls["tier"] = "mysql"
 
-	pvc_name := fmt.Sprintf("%s_mysql", m.Name)
+	pvc_name := fmt.Sprintf("%s-mysql", m.Name)
 	pvc_size := resource.NewQuantity(20*1024*1024*1024, resource.BinarySI)
+
+	scn := "standard"
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -266,7 +296,8 @@ func (r *ReconcileWordpress) mysqlPVCForWordpress(m *examplev1.Wordpress) *corev
 			Labels:    ls,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			StorageClassName: &scn,
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: *pvc_size,
@@ -284,7 +315,9 @@ func (r *ReconcileWordpress) wordpressPVCForWordpress(m *examplev1.Wordpress) *c
 	ls := labelsForWordpress(m.Name)
 	ls["tier"] = "frontend"
 
-	pvc_name := fmt.Sprintf("%s_wordpress", m.Name)
+	scn := "standard"
+
+	pvc_name := fmt.Sprintf("%s-wordpress", m.Name)
 	pvc_size := resource.NewQuantity(20*1024*1024*1024, resource.BinarySI)
 
 	pvc := &corev1.PersistentVolumeClaim{
@@ -294,7 +327,8 @@ func (r *ReconcileWordpress) wordpressPVCForWordpress(m *examplev1.Wordpress) *c
 			Labels:    ls,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			StorageClassName: &scn,
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: *pvc_size,
@@ -312,11 +346,11 @@ func (r *ReconcileWordpress) mysqlDeploymentForWordpress(m *examplev1.Wordpress)
 	ls := labelsForWordpress(m.Name)
 	ls["tier"] = "mysql"
 
-	volName := fmt.Sprintf("%s_mysql", m.Name)
+	volName := fmt.Sprintf("%s-mysql", m.Name)
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s_mysql", m.Name),
+			Name:      fmt.Sprintf("%s-mysql", m.Name),
 			Namespace: m.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -373,11 +407,11 @@ func (r *ReconcileWordpress) wordpressDeploymentForWordpress(m *examplev1.Wordpr
 	ls := labelsForWordpress(m.Name)
 	ls["tier"] = "frontend"
 
-	volName := fmt.Sprintf("%s_wordpress", m.Name)
+	volName := fmt.Sprintf("%s-wordpress", m.Name)
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s_wordpress", m.Name),
+			Name:      fmt.Sprintf("%s-wordpress", m.Name),
 			Namespace: m.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -405,7 +439,7 @@ func (r *ReconcileWordpress) wordpressDeploymentForWordpress(m *examplev1.Wordpr
 						},
 							{
 								Name:  "WORDPRESS_DB_HOST",
-								Value: fmt.Sprintf("%s_mysql", m.Name),
+								Value: fmt.Sprintf("%s-mysql", m.Name),
 							}},
 						Ports: []corev1.ContainerPort{{
 							ContainerPort: 80,
@@ -440,7 +474,7 @@ func (r *ReconcileWordpress) mysqlServiceForWordpress(m *examplev1.Wordpress) *c
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s_mysql", m.Name),
+			Name:      fmt.Sprintf("%s-mysql", m.Name),
 			Namespace: m.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -463,7 +497,7 @@ func (r *ReconcileWordpress) wordpressServiceForWordpress(m *examplev1.Wordpress
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s_wordpress", m.Name),
+			Name:      fmt.Sprintf("%s-wordpress", m.Name),
 			Namespace: m.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
