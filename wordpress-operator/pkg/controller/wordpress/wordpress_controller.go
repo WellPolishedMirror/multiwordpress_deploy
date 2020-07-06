@@ -143,61 +143,48 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	// Create mysql PersistentVolumeClaim if it doesn't already exist.
-	mysqlPVCFound := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysqlPVCFound)
-	if err != nil && errors.IsNotFound(err) {
-		mysqlPVC := r.mysqlPVCForWordpress(instance)
-		reqLogger.Info("Creating a new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
-		err = r.client.Create(context.TODO(), mysqlPVC)
-		if err != nil {
-			reqLogger.Error(err, "Failed to create new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
+	/*
+		// Create mysql PersistentVolumeClaim if it doesn't already exist.
+		mysqlPVCFound := &corev1.PersistentVolumeClaim{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysqlPVCFound)
+		if err != nil && errors.IsNotFound(err) {
+			mysqlPVC := r.mysqlPVCForWordpress(instance)
+			reqLogger.Info("Creating a new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
+			err = r.client.Create(context.TODO(), mysqlPVC)
+			if err != nil {
+				reqLogger.Error(err, "Failed to create new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
+				return reconcile.Result{}, err
+			}
+			// PVC created successfully - return and requeue
+			return reconcile.Result{Requeue: true}, nil
+		} else if err != nil {
+			reqLogger.Error(err, "Failed to get mysql PVC")
 			return reconcile.Result{}, err
 		}
-		// PVC created successfully - return and requeue
-		return reconcile.Result{Requeue: true}, nil
-	} else if err != nil {
-		reqLogger.Error(err, "Failed to get mysql PVC")
-		return reconcile.Result{}, err
-	}
-	// Create wordpress PVC if it doesn't already exist.
-	wordpressPVCFound := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpressPVCFound)
-	if err != nil && errors.IsNotFound(err) {
-		wordpressPVC := r.wordpressPVCForWordpress(instance)
-		reqLogger.Info("Creating a new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
-		err = r.client.Create(context.TODO(), wordpressPVC)
-		if err != nil {
-			reqLogger.Error(err, "Failed to create new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
+		// Create wordpress PVC if it doesn't already exist.
+		wordpressPVCFound := &corev1.PersistentVolumeClaim{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpressPVCFound)
+		if err != nil && errors.IsNotFound(err) {
+			wordpressPVC := r.wordpressPVCForWordpress(instance)
+			reqLogger.Info("Creating a new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
+			err = r.client.Create(context.TODO(), wordpressPVC)
+			if err != nil {
+				reqLogger.Error(err, "Failed to create new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
+				return reconcile.Result{}, err
+			}
+			// PV created successfully - return and requeue
+			return reconcile.Result{Requeue: true}, nil
+		} else if err != nil {
+			reqLogger.Error(err, "Failed to get wordpress PVC")
 			return reconcile.Result{}, err
 		}
-		// PV created successfully - return and requeue
-		return reconcile.Result{Requeue: true}, nil
-	} else if err != nil {
-		reqLogger.Error(err, "Failed to get wordpress PVC")
-		return reconcile.Result{}, err
-	}
+	*/
+	mysqlName := fmt.Sprintf("%s-mysql", instance.Name)
+	wordpressName := fmt.Sprintf("%s-wordpress", instance.Name)
 
-	// Create wordpress deployment if it doesn't already exist.
-	wordpressDepFound := &appsv1.Deployment{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpressDepFound)
-	if err != nil && errors.IsNotFound(err) {
-		wordpressDep := r.wordpressDeploymentForWordpress(instance)
-		reqLogger.Info("Creating a new Deployment", "wordpressDep.Namespace", wordpressDep.Namespace, "wordpressDep.Name", wordpressDep.Name)
-		err = r.client.Create(context.TODO(), wordpressDep)
-		if err != nil {
-			reqLogger.Error(err, "Failed to create new Deployment", "wordpressDep.Namespace", wordpressDep.Namespace, "wordpressDep.Name", wordpressDep.Name)
-			return reconcile.Result{}, err
-		}
-		// Deployment created successfully - return and requeue
-		return reconcile.Result{Requeue: true}, nil
-	} else if err != nil {
-		reqLogger.Error(err, "Failed to get wordpress Deployment")
-		return reconcile.Result{}, err
-	}
 	// Create mysql deployment if it doesn't already exist.
 	mysqlDepFound := &appsv1.Deployment{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysqlDepFound)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: mysqlName, Namespace: instance.Namespace}, mysqlDepFound)
 	if err != nil && errors.IsNotFound(err) {
 		mysqlDep := r.mysqlDeploymentForWordpress(instance)
 		reqLogger.Info("Creating a new Deployment", "mysqlDep.Namespace", mysqlDep.Namespace, "mysqlDep.Name", mysqlDep.Name)
@@ -212,10 +199,9 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		reqLogger.Error(err, "Failed to get mysql Deployment")
 		return reconcile.Result{}, err
 	}
-
 	// Create mysql service
 	mysqlServiceFound := &corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysqlServiceFound)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: mysqlName, Namespace: instance.Namespace}, mysqlServiceFound)
 	if err != nil && errors.IsNotFound(err) {
 		mysqlService := r.mysqlServiceForWordpress(instance)
 		reqLogger.Info("Creating a new Service", "mysqlService.Namespace", mysqlService.Namespace, "mysqlService.Name", mysqlService.Name)
@@ -230,9 +216,27 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		reqLogger.Error(err, "Failed to get mysql Service")
 		return reconcile.Result{}, err
 	}
+
+	// Create wordpress deployment if it doesn't already exist.
+	wordpressDepFound := &appsv1.Deployment{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: wordpressName, Namespace: instance.Namespace}, wordpressDepFound)
+	if err != nil && errors.IsNotFound(err) {
+		wordpressDep := r.wordpressDeploymentForWordpress(instance)
+		reqLogger.Info("Creating a new Deployment", "wordpressDep.Namespace", wordpressDep.Namespace, "wordpressDep.Name", wordpressDep.Name)
+		err = r.client.Create(context.TODO(), wordpressDep)
+		if err != nil {
+			reqLogger.Error(err, "Failed to create new Deployment", "wordpressDep.Namespace", wordpressDep.Namespace, "wordpressDep.Name", wordpressDep.Name)
+			return reconcile.Result{}, err
+		}
+		// Deployment created successfully - return and requeue
+		return reconcile.Result{Requeue: true}, nil
+	} else if err != nil {
+		reqLogger.Error(err, "Failed to get wordpress Deployment")
+		return reconcile.Result{}, err
+	}
 	// Create wordpress service
 	wordpressServiceFound := &corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpressServiceFound)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: wordpressName, Namespace: instance.Namespace}, wordpressServiceFound)
 	if err != nil && errors.IsNotFound(err) {
 		wordpressService := r.wordpressServiceForWordpress(instance)
 		reqLogger.Info("Creating a new Service", "wordpressService.Namespace", wordpressService.Namespace, "wordpressService.Name", wordpressService.Name)
@@ -346,7 +350,7 @@ func (r *ReconcileWordpress) mysqlDeploymentForWordpress(m *examplev1.Wordpress)
 	ls := labelsForWordpress(m.Name)
 	ls["tier"] = "mysql"
 
-	volName := fmt.Sprintf("%s-mysql", m.Name)
+	//volName := fmt.Sprintf("%s-mysql", m.Name)
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -380,19 +384,23 @@ func (r *ReconcileWordpress) mysqlDeploymentForWordpress(m *examplev1.Wordpress)
 							ContainerPort: 3306,
 							Name:          "mysql",
 						}},
-						VolumeMounts: []corev1.VolumeMount{{
-							Name:      volName,
-							MountPath: "/var/lib/mysql",
-						}},
+						/*
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      volName,
+								MountPath: "/var/lib/mysql",
+							}},
+						*/
 					}},
-					Volumes: []corev1.Volume{{
-						Name: volName,
-						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: volName,
+					/*
+						Volumes: []corev1.Volume{{
+							Name: volName,
+							VolumeSource: corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: volName,
+								},
 							},
-						},
-					}},
+						}},
+					*/
 				},
 			},
 		},
@@ -407,7 +415,7 @@ func (r *ReconcileWordpress) wordpressDeploymentForWordpress(m *examplev1.Wordpr
 	ls := labelsForWordpress(m.Name)
 	ls["tier"] = "frontend"
 
-	volName := fmt.Sprintf("%s-wordpress", m.Name)
+	//volName := fmt.Sprintf("%s-wordpress", m.Name)
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -445,19 +453,23 @@ func (r *ReconcileWordpress) wordpressDeploymentForWordpress(m *examplev1.Wordpr
 							ContainerPort: 80,
 							Name:          "wordpress",
 						}},
-						VolumeMounts: []corev1.VolumeMount{{
-							Name:      volName,
-							MountPath: "/var/www/html",
-						}},
+						/*
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      volName,
+								MountPath: "/var/www/html",
+							}},
+						*/
 					}},
-					Volumes: []corev1.Volume{{
-						Name: volName,
-						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: volName,
+					/*
+						Volumes: []corev1.Volume{{
+							Name: volName,
+							VolumeSource: corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: volName,
+								},
 							},
-						},
-					}},
+						}},
+					*/
 				},
 			},
 		},
