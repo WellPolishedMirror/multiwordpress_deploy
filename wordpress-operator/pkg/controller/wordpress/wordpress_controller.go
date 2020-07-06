@@ -147,42 +147,40 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 	mysqlName := fmt.Sprintf("%s-mysql", instance.Name)
 	wordpressName := fmt.Sprintf("%s-wordpress", instance.Name)
 
-	/*
-		// Create mysql PersistentVolumeClaim if it doesn't already exist.
-		mysqlPVCFound := &corev1.PersistentVolumeClaim{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: mysqlName, Namespace: instance.Namespace}, mysqlPVCFound)
-		if err != nil && errors.IsNotFound(err) {
-			mysqlPVC := r.mysqlPVCForWordpress(instance)
-			reqLogger.Info("Creating a new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
-			err = r.client.Create(context.TODO(), mysqlPVC)
-			if err != nil {
-				reqLogger.Error(err, "Failed to create new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
-				return reconcile.Result{}, err
-			}
-			// PVC created successfully - return and requeue
-			return reconcile.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to get mysql PVC")
+	// Create mysql PersistentVolumeClaim if it doesn't already exist.
+	mysqlPVCFound := &corev1.PersistentVolumeClaim{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: mysqlName, Namespace: instance.Namespace}, mysqlPVCFound)
+	if err != nil && errors.IsNotFound(err) {
+		mysqlPVC := r.mysqlPVCForWordpress(instance)
+		reqLogger.Info("Creating a new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
+		err = r.client.Create(context.TODO(), mysqlPVC)
+		if err != nil {
+			reqLogger.Error(err, "Failed to create new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
 			return reconcile.Result{}, err
 		}
-		// Create wordpress PVC if it doesn't already exist.
-		wordpressPVCFound := &corev1.PersistentVolumeClaim{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: wordpressName, Namespace: instance.Namespace}, wordpressPVCFound)
-		if err != nil && errors.IsNotFound(err) {
-			wordpressPVC := r.wordpressPVCForWordpress(instance)
-			reqLogger.Info("Creating a new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
-			err = r.client.Create(context.TODO(), wordpressPVC)
-			if err != nil {
-				reqLogger.Error(err, "Failed to create new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
-				return reconcile.Result{}, err
-			}
-			// PVC created successfully - return and requeue
-			return reconcile.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to get wordpress PVC")
+		// PVC created successfully - return and requeue
+		return reconcile.Result{Requeue: true}, nil
+	} else if err != nil {
+		reqLogger.Error(err, "Failed to get mysql PVC")
+		return reconcile.Result{}, err
+	}
+	// Create wordpress PVC if it doesn't already exist.
+	wordpressPVCFound := &corev1.PersistentVolumeClaim{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: wordpressName, Namespace: instance.Namespace}, wordpressPVCFound)
+	if err != nil && errors.IsNotFound(err) {
+		wordpressPVC := r.wordpressPVCForWordpress(instance)
+		reqLogger.Info("Creating a new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
+		err = r.client.Create(context.TODO(), wordpressPVC)
+		if err != nil {
+			reqLogger.Error(err, "Failed to create new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
 			return reconcile.Result{}, err
 		}
-	*/
+		// PVC created successfully - return and requeue
+		return reconcile.Result{Requeue: true}, nil
+	} else if err != nil {
+		reqLogger.Error(err, "Failed to get wordpress PVC")
+		return reconcile.Result{}, err
+	}
 
 	// Create mysql deployment if it doesn't already exist.
 	mysqlDepFound := &appsv1.Deployment{}
@@ -352,7 +350,7 @@ func (r *ReconcileWordpress) mysqlDeploymentForWordpress(m *examplev1.Wordpress)
 	ls := labelsForWordpress(m.Name)
 	ls["tier"] = "mysql"
 
-	//volName := fmt.Sprintf("%s-mysql", m.Name)
+	volName := fmt.Sprintf("%s-mysql", m.Name)
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -386,23 +384,19 @@ func (r *ReconcileWordpress) mysqlDeploymentForWordpress(m *examplev1.Wordpress)
 							ContainerPort: 3306,
 							Name:          "mysql",
 						}},
-						/*
-							VolumeMounts: []corev1.VolumeMount{{
-								Name:      volName,
-								MountPath: "/var/lib/mysql",
-							}},
-						*/
-					}},
-					/*
-						Volumes: []corev1.Volume{{
-							Name: volName,
-							VolumeSource: corev1.VolumeSource{
-								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: volName,
-								},
-							},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      volName,
+							MountPath: "/var/lib/mysql",
 						}},
-					*/
+					}},
+					Volumes: []corev1.Volume{{
+						Name: volName,
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+								ClaimName: volName,
+							},
+						},
+					}},
 				},
 			},
 		},
@@ -417,7 +411,7 @@ func (r *ReconcileWordpress) wordpressDeploymentForWordpress(m *examplev1.Wordpr
 	ls := labelsForWordpress(m.Name)
 	ls["tier"] = "frontend"
 
-	//volName := fmt.Sprintf("%s-wordpress", m.Name)
+	volName := fmt.Sprintf("%s-wordpress", m.Name)
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -455,23 +449,19 @@ func (r *ReconcileWordpress) wordpressDeploymentForWordpress(m *examplev1.Wordpr
 							ContainerPort: 80,
 							Name:          "wordpress",
 						}},
-						/*
-							VolumeMounts: []corev1.VolumeMount{{
-								Name:      volName,
-								MountPath: "/var/www/html",
-							}},
-						*/
-					}},
-					/*
-						Volumes: []corev1.Volume{{
-							Name: volName,
-							VolumeSource: corev1.VolumeSource{
-								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: volName,
-								},
-							},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      volName,
+							MountPath: "/var/www/html",
 						}},
-					*/
+					}},
+					Volumes: []corev1.Volume{{
+						Name: volName,
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+								ClaimName: volName,
+							},
+						},
+					}},
 				},
 			},
 		},

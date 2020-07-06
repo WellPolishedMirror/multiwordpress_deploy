@@ -15,7 +15,7 @@ spec:
       serviceAccountName: wordpress-operator
       containers:
         - name: wordpress-operator
-          image: renancampos/wordpress-operator:no-pvc
+          image: renancampos/wordpress-operator
           command:
           - wordpress-operator
           imagePullPolicy: Always
