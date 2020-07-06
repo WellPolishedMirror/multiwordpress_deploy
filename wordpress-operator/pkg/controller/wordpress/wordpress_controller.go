@@ -143,10 +143,14 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
+	// Names used for other secondary resources.
+	mysqlName := fmt.Sprintf("%s-mysql", instance.Name)
+	wordpressName := fmt.Sprintf("%s-wordpress", instance.Name)
+
 	/*
 		// Create mysql PersistentVolumeClaim if it doesn't already exist.
 		mysqlPVCFound := &corev1.PersistentVolumeClaim{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, mysqlPVCFound)
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: mysqlName, Namespace: instance.Namespace}, mysqlPVCFound)
 		if err != nil && errors.IsNotFound(err) {
 			mysqlPVC := r.mysqlPVCForWordpress(instance)
 			reqLogger.Info("Creating a new PVC", "mysqlPVC.Namespace", mysqlPVC.Namespace, "mysqlPVC.Name", mysqlPVC.Name)
@@ -163,7 +167,7 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 		// Create wordpress PVC if it doesn't already exist.
 		wordpressPVCFound := &corev1.PersistentVolumeClaim{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, wordpressPVCFound)
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: wordpressName, Namespace: instance.Namespace}, wordpressPVCFound)
 		if err != nil && errors.IsNotFound(err) {
 			wordpressPVC := r.wordpressPVCForWordpress(instance)
 			reqLogger.Info("Creating a new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
@@ -172,15 +176,13 @@ func (r *ReconcileWordpress) Reconcile(request reconcile.Request) (reconcile.Res
 				reqLogger.Error(err, "Failed to create new PVC", "wordpressPVC.Namespace", wordpressPVC.Namespace, "wordpressPVC.Name", wordpressPVC.Name)
 				return reconcile.Result{}, err
 			}
-			// PV created successfully - return and requeue
+			// PVC created successfully - return and requeue
 			return reconcile.Result{Requeue: true}, nil
 		} else if err != nil {
 			reqLogger.Error(err, "Failed to get wordpress PVC")
 			return reconcile.Result{}, err
 		}
 	*/
-	mysqlName := fmt.Sprintf("%s-mysql", instance.Name)
-	wordpressName := fmt.Sprintf("%s-wordpress", instance.Name)
 
 	// Create mysql deployment if it doesn't already exist.
 	mysqlDepFound := &appsv1.Deployment{}
